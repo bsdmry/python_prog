@@ -8,72 +8,71 @@ from tkinter import PhotoImage
 
 class WinGameSound():
 	def __init__(self):
-        self.records = {}         # identifier -> filename
-        self.threads = {}         # identifier -> thread
-        self.stop_flags = {}      # identifier -> threading.Event
-        self.pyaudio_instance = pyaudio.PyAudio()
+		self.records = {}         # identifier -> filename
+		self.threads = {}         # identifier -> thread
+		self.stop_flags = {}      # identifier -> threading.Event
+		self.pyaudio_instance = pyaudio.PyAudio()
 
-    def add_record(self, filename: str, identifier: str):
-        self.records[identifier] = filename
+	def add_record(self, filename: str, identifier: str):
+		self.records[identifier] = filename
 
-    def play_once(self, identifier: str):
-        def _play():
-            self._play_wave_file(self.records[identifier])
+	def play_once(self, identifier: str):
+		def _play():
+			self._play_wave_file(self.records[identifier])
 
-        self._start_thread(identifier, _play)
+		self._start_thread(identifier, _play)
 
-    def play_loop(self, identifier: str):
-        stop_event = threading.Event()
-        self.stop_flags[identifier] = stop_event
+	def play_loop(self, identifier: str):
+		stop_event = threading.Event()
+		self.stop_flags[identifier] = stop_event
 
-        def _loop():
-            while not stop_event.is_set():
-                self._play_wave_file(self.records[identifier], stop_event)
+		def _loop():
+			while not stop_event.is_set():
+				self._play_wave_file(self.records[identifier], stop_event)
+		self._start_thread(identifier, _loop)
 
-        self._start_thread(identifier, _loop)
+	def stop(self, identifier: str):
+		if identifier in self.stop_flags:
+			self.stop_flags[identifier].set()
+		if identifier in self.threads:
+			self.threads[identifier].join()
+			del self.threads[identifier]
+		if identifier in self.stop_flags:
+			del self.stop_flags[identifier]
 
-    def stop(self, identifier: str):
-        if identifier in self.stop_flags:
-            self.stop_flags[identifier].set()
-        if identifier in self.threads:
-            self.threads[identifier].join()
-            del self.threads[identifier]
-        if identifier in self.stop_flags:
-            del self.stop_flags[identifier]
+	def stop_all(self):
+		for identifier in list(self.threads.keys()):
+			self.stop(identifier)
 
-    def stop_all(self):
-        for identifier in list(self.threads.keys()):
-            self.stop(identifier)
+	def _start_thread(self, identifier: str, target_func):
+		if identifier in self.threads:
+			self.stop(identifier)
+		thread = threading.Thread(target=target_func, daemon=True)
+		self.threads[identifier] = thread
+		thread.start()
 
-    def _start_thread(self, identifier: str, target_func):
-        if identifier in self.threads:
-            self.stop(identifier)
-        thread = threading.Thread(target=target_func, daemon=True)
-        self.threads[identifier] = thread
-        thread.start()
-
-    def _play_wave_file(self, filename: str, stop_event: threading.Event = None):
-        wf = wave.open(filename, 'rb')
-        stream = self.pyaudio_instance.open(
+	def _play_wave_file(self, filename: str, stop_event: threading.Event = None):
+		wf = wave.open(filename, 'rb')
+		stream = self.pyaudio_instance.open(
             format=self.pyaudio_instance.get_format_from_width(wf.getsampwidth()),
             channels=wf.getnchannels(),
             rate=wf.getframerate(),
             output=True
         )
 
-        chunk_size = 1024
-        data = wf.readframes(chunk_size)
-        while data and (stop_event is None or not stop_event.is_set()):
-            stream.write(data)
-            data = wf.readframes(chunk_size)
+		chunk_size = 2048
+		data = wf.readframes(chunk_size)
+		while data and (stop_event is None or not stop_event.is_set()):
+			stream.write(data)
+			data = wf.readframes(chunk_size)
 
-        stream.stop_stream()
-        stream.close()
-        wf.close()
+		stream.stop_stream()
+		stream.close()
+		wf.close()
 
-    def __del__(self):
-        self.stop_all()
-        self.pyaudio_instance.terminate()
+	def __del__(self):
+		self.stop_all()
+		self.pyaudio_instance.terminate()
 
 class WinGame(threading.Thread):
 	def __init__(self):
