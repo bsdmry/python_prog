@@ -89,6 +89,7 @@ class WinGame(threading.Thread):
 		self.windowlist = {};
 		self.current_window = None
 		self.current_window_controls = []
+		self.tasks = {};
 		self.app = tk.Frame(master = None)
 		self.app.master.title("Template app")
 		self.app.modal = None
@@ -132,6 +133,19 @@ class WinGame(threading.Thread):
                             fg=self.windowlist[window_id]['controls'][control_id]['fgcolor'],
                             height=self.windowlist[window_id]['controls'][control_id]['height'],
                             width=self.windowlist[window_id]['controls'][control_id]['width'])
+				elif self.windowlist[window_id]['controls'][control_id]['ctl_type'] == 'animation':
+					obj = tk.Label(self.app.master,
+                            image=self.windowlist[window_id]['controls'][control_id]['animation'][0]['image'],
+                            bg=self.windowlist[window_id]['controls'][control_id]['animation'][0]['bgcolor'],
+                            fg=self.windowlist[window_id]['controls'][control_id]['animation'][0]['fgcolor'],
+                            height=self.windowlist[window_id]['controls'][control_id]['height'],
+                            width=self.windowlist[window_id]['controls'][control_id]['width'])
+					self.tasks[control_id]['ctl_type'] = 'animation'
+					self.tasks[control_id]['playtype'] = self.windowlist[window_id]['controls'][control_id]['playtype']
+					self.tasks[control_id]['frametimeout'] = 0 #counter for frame time
+					self.tasks[control_id]['frametime'] = 5 #frame time in frame units
+					self.tasks[control_id]['framecount'] = len(self.windowlist[window_id]['controls'][control_id]['animation'])
+					self.tasks[control_id]['current_frame'] = 0
 				setattr(self.app.master, control_id, obj)
 				obj.place(x=self.windowlist[window_id]['controls'][control_id]['x'],
 						y=self.windowlist[window_id]['controls'][control_id]['y'])
@@ -181,5 +195,16 @@ class WinGame(threading.Thread):
 				self.windowlist[window_id]['controls'][control_id] = {'ctl_type':'image', 'image':PhotoImage(file=image),'bgcolor':bgcolor, 'fgcolor':fgcolor, 'width':w, 'height':h, 'x':x, 'y':y}
 			else:
 				print("Error! Image {} already exist in window {}".format(control_id, window_id))
+		else:
+			print("Error! View {} doesn't exist!".format(window_id))
+
+	def add_animation(self, window_id='View', control_id='animation1', animation=[{'image':None, 'bgcolor':'white', 'fgcolor':'black'}], playtype='play_loop', w=10, h=10, x = 0, y = 0):		
+		if window_id in self.windowlist:	
+			if control_id not in self.windowlist[window_id]['controls']:
+				self.windowlist[window_id]['controls'][control_id] = {'ctl_type':'animation', 'playtype':playtype, 'animation':[], 'width':w, 'height':h, 'x':x, 'y':y}
+				for a in animation:
+					self.windowlist[window_id]['controls'][control_id]['animation'].append({'image':PhotoImage(file=a['image'], 'bgcolor':a['bgcolor'], 'fgcolor':a['fgcolor'])})
+			else:
+				print("Error! Animation {} already exist in window {}".format(control_id, window_id))
 		else:
 			print("Error! View {} doesn't exist!".format(window_id))
