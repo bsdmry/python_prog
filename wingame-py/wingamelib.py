@@ -123,56 +123,86 @@ class WinGame(threading.Thread):
 	# Removes controls from the window 
 	def clear_window(self):
 		for current_control in self.current_window_controls:
-			if current_control in self.tasks.keys(): #if regular task for the control exist
-				del self.tasks[current_control]	#delete this task
-			obj = getattr(self.app.master, current_control) #get Tkinter control object
-			obj.destroy() # remove control from window
-			obj = None 
-			delattr(self.app.master, current_control) # delete attribute object
+			self._delete_active_control_obj(self.app.master, current_control)
 
+	def _delete_active_control_obj(self, parent_object, control_id):
+		if control_id in self.tasks.keys(): #if regular task for the control exist
+			del self.tasks[control_id]	#delete this task
+		obj = getattr(parent_object, control_id) #get Tkinter control object
+		obj.destroy() # remove control from window
+		obj = None 
+		delattr(parent_object, control_id) # delete attribute object
+
+	def _create_button_obj(self, parent_object, control_id, ctl_config):
+		obj = tk.Button(parent_object, 
+ 			text=ctl_config['text'], 
+            command=ctl_config['action'], 
+            bg=ctl_config['bgcolor'], 
+            fg=ctl_config['fgcolor'])
+		setattr(parent_object, control_id, obj)
+		obj.place(x=ctl_config['x'],
+				  y=ctl_config['y'])
+		return obj
+	
+	def _create_label_obj(self, parent_object, control_id, ctl_config):
+		obj = tk.Label(parent_object, 
+            text=ctl_config['text'],
+            bg=ctl_config['bgcolor'],
+            fg=ctl_config['fgcolor'],
+            height=ctl_config['height'],
+            width=ctl_config['width'])
+		setattr(parent_object, control_id, obj)
+		obj.place(x=ctl_config['x'],
+				  y=ctl_config['y'])
+		return obj
+
+	def _create_image_obj(self, parent_object, control_id, ctl_config):
+		obj = tk.Label(parent_object,
+            image=ctl_config['image'],
+            bg=ctl_config['bgcolor'],
+            fg=ctl_config['fgcolor'],
+            height=ctl_config['height'],
+            width=ctl_config['width'])
+		obj.bind('<Enter>', ctl_config['onenter'])
+		obj.bind('<Leave>', ctl_config['onleave'])
+		obj.bind('<Button-1>', ctl_config['onclick'])
+		setattr(parent_object, control_id, obj)
+		obj.place(x=ctl_config['x'],
+				  y=ctl_config['y'])
+		return obj
+	def _create_animation_obj(self, parent_object, control_id, ctl_config):
+		obj = tk.Label(parent_object,
+            image=ctl_config['animation'][0]['image'],
+            bg=ctl_config['animation'][0]['bgcolor'],
+            fg=ctl_config['animation'][0]['fgcolor'],
+            height=ctl_config['height'],
+            width=ctl_config['width'])
+		if control_id not in self.tasks:
+			self.tasks[control_id] = {}
+		self.tasks[control_id]['ctl_type'] = 'animation'
+		self.tasks[control_id]['playtype'] = ctl_config['playtype']
+		self.tasks[control_id]['frametimeout'] = 0 #counter for frame time
+		self.tasks[control_id]['frametime'] = 5 #frame time in frame units
+		self.tasks[control_id]['framecount'] = len(ctl_config['animation'])
+		self.tasks[control_id]['current_frame'] = 0
+		setattr(parent_object, control_id, obj)
+		obj.place(x=ctl_config['x'],
+				  y=ctl_config['y'])
+		return obj
+		
 	# Creates controls on the window, according to the configuration object 
 	def fill_window(self, window_id=None):
 		if window_id != None:
 			for control_id in self.windowlist[window_id]['controls'].keys():
 				self.current_window_controls.append(control_id)
 				if self.windowlist[window_id]['controls'][control_id]['ctl_type'] == 'button':
-					obj = tk.Button(self.app.master, 
-                            text=self.windowlist[window_id]['controls'][control_id]['text'], 
-                            command=self.windowlist[window_id]['controls'][control_id]['action'], 
-                            bg=self.windowlist[window_id]['controls'][control_id]['bgcolor'], 
-                            fg=self.windowlist[window_id]['controls'][control_id]['fgcolor'])
+					obj = self._create_button_obj(self.app.master, control_id, self.windowlist[window_id]['controls'][control_id])
 				elif self.windowlist[window_id]['controls'][control_id]['ctl_type'] == 'label':
-					obj = tk.Label(self.app.master, 
-                            text=self.windowlist[window_id]['controls'][control_id]['text'],
-                            bg=self.windowlist[window_id]['controls'][control_id]['bgcolor'],
-                            fg=self.windowlist[window_id]['controls'][control_id]['fgcolor'],
-                            height=self.windowlist[window_id]['controls'][control_id]['height'],
-                            width=self.windowlist[window_id]['controls'][control_id]['width'])
+					obj = self._create_label_obj(self.app.master, control_id, self.windowlist[window_id]['controls'][control_id])
 				elif self.windowlist[window_id]['controls'][control_id]['ctl_type'] == 'image':
-					obj = tk.Label(self.app.master,
-                            image=self.windowlist[window_id]['controls'][control_id]['image'],
-                            bg=self.windowlist[window_id]['controls'][control_id]['bgcolor'],
-                            fg=self.windowlist[window_id]['controls'][control_id]['fgcolor'],
-                            height=self.windowlist[window_id]['controls'][control_id]['height'],
-                            width=self.windowlist[window_id]['controls'][control_id]['width'])
+					obj = self._create_image_obj(self.app.master, control_id, self.windowlist[window_id]['controls'][control_id])
 				elif self.windowlist[window_id]['controls'][control_id]['ctl_type'] == 'animation':
-					obj = tk.Label(self.app.master,
-                            image=self.windowlist[window_id]['controls'][control_id]['animation'][0]['image'],
-                            bg=self.windowlist[window_id]['controls'][control_id]['animation'][0]['bgcolor'],
-                            fg=self.windowlist[window_id]['controls'][control_id]['animation'][0]['fgcolor'],
-                            height=self.windowlist[window_id]['controls'][control_id]['height'],
-                            width=self.windowlist[window_id]['controls'][control_id]['width'])
-					if control_id not in self.tasks:
-						self.tasks[control_id] = {}
-					self.tasks[control_id]['ctl_type'] = 'animation'
-					self.tasks[control_id]['playtype'] = self.windowlist[window_id]['controls'][control_id]['playtype']
-					self.tasks[control_id]['frametimeout'] = 0 #counter for frame time
-					self.tasks[control_id]['frametime'] = 5 #frame time in frame units
-					self.tasks[control_id]['framecount'] = len(self.windowlist[window_id]['controls'][control_id]['animation'])
-					self.tasks[control_id]['current_frame'] = 0
-				setattr(self.app.master, control_id, obj)
-				obj.place(x=self.windowlist[window_id]['controls'][control_id]['x'],
-						y=self.windowlist[window_id]['controls'][control_id]['y'])
+					obj = self._create_animation_obj(self.app.master, control_id, self.windowlist[window_id]['controls'][control_id])
 
 	# Changes the main window
 	def show_window(self, window_id=None):
@@ -218,21 +248,61 @@ class WinGame(threading.Thread):
 	def add_image(self, window_id='View', control_id='img1', image=None, bgcolor='white', fgcolor='black', onclick=None, onenter=None, onleave=None, w=10, h=10, x = 0, y = 0):		
 		if window_id in self.windowlist:	
 			if control_id not in self.windowlist[window_id]['controls']:
-				self.windowlist[window_id]['controls'][control_id] = {'ctl_type':'image', 'image':PhotoImage(file=image),'bgcolor':bgcolor, 'fgcolor':fgcolor, 'width':w, 'height':h, 'x':x, 'y':y}
+				self.windowlist[window_id]['controls'][control_id] = {
+									'ctl_type':'image', 
+									'image':PhotoImage(file=image),
+									'bgcolor':bgcolor, 
+									'fgcolor':fgcolor, 
+									'onclick':onclick, 
+									'onenter':onenter, 
+									'onleave':onleave, 
+									'width':w, 
+									'height':h, 
+									'x':x, 
+									'y':y}
 			else:
 				print("Error! Image {} already exist in window {}".format(control_id, window_id))
 		else:
 			print("Error! View {} doesn't exist!".format(window_id))
+
+	def update_image(self, window_id=None, control_id='img1', **params):
+		if window_id in self.windowlist:	
+			if control_id in self.windowlist[window_id]['controls']:
+				for k,v in params.items():
+					if k == 'image':
+						self.windowlist[window_id]['controls'][control_id][k] = PhotoImage(file=v)
+					else:
+						self.windowlist[window_id]['controls'][control_id][k] = v
+				if window_id == self.current_window: #image is on the active window. Delete and create with new params
+					for k,v in params.items(): #we can change on-fly only few base params
+						if k == 'image':
+							getattr(self.app.master, control_id).config(image=self.windowlist[window_id]['controls'][control_id][k])
+						elif k == 'bgcolor':
+							getattr(self.app.master, control_id).config(bg=v)
+						elif k == 'fgcolor':
+							getattr(self.app.master, control_id).config(fg=v)
+						elif k == 'w':
+							getattr(self.app.master, control_id).config(width=v)
+						elif k == 'h':
+							getattr(self.app.master, control_id).config(height=v)
+						elif k == 'x':
+							getattr(self.app.master, control_id).place(x=v)
+						elif k == 'y':
+							getattr(self.app.master, control_id).place(y=v)
+							
+				#self._delete_active_control_obj(self.app.master, control_id)
+				#self._create_image_obj(self.app.master, control_id, self.windowlist[window_id]['controls'][control_id])
+	
 
 	def add_animation(self, window_id='View', control_id='animation1', animation=[{'image':None, 'bgcolor':'white', 'fgcolor':'black'}], playtype='play_loop', frametime=5,  w=10, h=10, x = 0, y = 0):		
 		if window_id in self.windowlist:	
 			if control_id not in self.windowlist[window_id]['controls']:
 				self.windowlist[window_id]['controls'][control_id] = {'ctl_type':'animation', 'playtype':playtype, 'frametime':frametime, 'animation':[], 'width':w, 'height':h, 'x':x, 'y':y}
 				for a in animation:
-					im = a['image']
+					im = PhotoImage(file=a['image'])
 					fg = a['fgcolor']
 					bg = a['bgcolor']
-					self.windowlist[window_id]['controls'][control_id]['animation'].append({'image':PhotoImage(file=im), 'bgcolor':bg, 'fgcolor':fg})
+					self.windowlist[window_id]['controls'][control_id]['animation'].append({'image':im, 'bgcolor':bg, 'fgcolor':fg})
 			else:
 				print("Error! Animation {} already exist in window {}".format(control_id, window_id))
 		else:
