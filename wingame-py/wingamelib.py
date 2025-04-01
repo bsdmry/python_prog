@@ -215,7 +215,7 @@ class WinGame(threading.Thread):
 		else:
 			print("Error! View {} doesn't exist!".format(window_id))
 
-	def add_image(self, window_id='View', control_id='img1', image=None, bgcolor='white', fgcolor='black', w=10, h=10, x = 0, y = 0):		
+	def add_image(self, window_id='View', control_id='img1', image=None, bgcolor='white', fgcolor='black', onclick=None, onenter=None, onleave=None, w=10, h=10, x = 0, y = 0):		
 		if window_id in self.windowlist:	
 			if control_id not in self.windowlist[window_id]['controls']:
 				self.windowlist[window_id]['controls'][control_id] = {'ctl_type':'image', 'image':PhotoImage(file=image),'bgcolor':bgcolor, 'fgcolor':fgcolor, 'width':w, 'height':h, 'x':x, 'y':y}
