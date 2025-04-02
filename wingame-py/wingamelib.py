@@ -40,6 +40,12 @@ class WinGameSound():
 		if identifier in self.stop_flags:
 			del self.stop_flags[identifier]
 
+	def is_playing(self, identifier: str):
+		if identifier in self.stop_flags:
+			return True
+		else:
+			return False	
+
 	def stop_all(self):
 		for identifier in list(self.threads.keys()):
 			self.stop(identifier)
